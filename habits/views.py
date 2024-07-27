@@ -1,64 +1,94 @@
-from rest_framework import generics
+from rest_framework import viewsets, generics
 from rest_framework.permissions import IsAuthenticated
 
-from habits.models import Habit
-from habits.paginations import HabitPagination
-from habits.serializers import HabitSerializer
+from habits.models import Reward, Habit
+from habits.paginations import CustomPagination
+from habits.serializers import RewardSerializer, HabitSerializer
+
 from users.permissions import IsOwner
 
 
-class HabitListAPIView(generics.ListAPIView):
-    """Список всех привычек."""
+class RewardViewSet(viewsets.ModelViewSet):
+    serializer_class = RewardSerializer
+    queryset = Reward.objects.all()
 
-    serializer_class = HabitSerializer
-
-    def get_queryset(self):
-        """Получаем привычки текущего пользователя"""
-
-        user = self.request.user
-        return Habit.objects.filter(user=user)
-
-    pagination_class = HabitPagination
-
-
-class HabitPublishListAPIView(generics.ListAPIView):
-    """Список публичных привычек."""
-
-    queryset = Habit.objects.filter(is_public=True)
-    serializer_class = HabitSerializer
-    pagination_class = HabitPagination
+    def perform_create(self, serializer):
+        """
+        Метод получения владельца курса
+        :param serializer: на вход получаем сериализатор
+        """
+        reward = serializer.save()
+        reward.owner = self.request.user
+        reward.save()
 
 
 class HabitCreateAPIView(generics.CreateAPIView):
-    """Создание привычки"""
-
     serializer_class = HabitSerializer
-    queryset = Habit.objects.all()
 
     def perform_create(self, serializer):
-        """Делаем текущего пользователя 'Создателем' привычки"""
+        """
+        Метод получения владельца курса
+        :param serializer: на вход получаем сериализатор
+        """
         habit = serializer.save()
-        habit.user = self.request.user
+        habit.owner = self.request.user
         habit.save()
 
 
-class HabitRetrieveAPIView(generics.RetrieveAPIView):
-    """Отображение одной привычки"""
-
+class HabitListAPIView(generics.ListAPIView):
     serializer_class = HabitSerializer
     queryset = Habit.objects.all()
+    pagination_class = CustomPagination
+
+    def get_queryset(self, *args, **kwargs):
+        user = self.request.user
+        if user.is_superuser:
+            return Habit.objects.all()
+        elif user.is_authenticated:
+            return Habit.objects.filter(owner=user)
+
+
+class HabitIsPublicListAPIView(generics.ListAPIView):
+    serializer_class = HabitSerializer
+
+    def get_queryset(self, *args, **kwargs):
+        """
+        Метод получения публичных уроков
+        """
+        return Habit.objects.filter(is_public=True)
+
+
+class HabitRetrieveAPIView(generics.RetrieveAPIView):
+    serializer_class = HabitSerializer
+    queryset = Habit.objects.all()
+    permission_classes = (
+        IsAuthenticated,
+        IsOwner,
+    )
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.is_authenticated:
+            return Habit.objects.filter(owner=user)
 
 
 class HabitUpdateAPIView(generics.UpdateAPIView):
-    """Изменение привычки"""
-
     serializer_class = HabitSerializer
     queryset = Habit.objects.all()
-    permission_classes = [IsOwner, IsAuthenticated]
+    permission_classes = (
+        IsAuthenticated,
+        IsOwner,
+    )
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.is_authenticated:
+            return Habit.objects.filter(owner=user)
 
 
 class HabitDestroyAPIView(generics.DestroyAPIView):
-    """Удаление привычки"""
-
     queryset = Habit.objects.all()
-    permission_classes = [IsOwner, IsAuthenticated]
+    permission_classes = (
+        IsAuthenticated,
+        IsOwner,
+    )

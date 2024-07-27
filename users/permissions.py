@@ -2,11 +2,14 @@ from rest_framework import permissions
 
 
 class IsOwner(permissions.BasePermission):
-    """Проверяет, является ли пользователь владельцем"""
+    """
+    Проверка на владельца
+    """
 
-    message = "You must be the owner of this content."
+    message = "Только владельцы могут просматривать данный объект."
 
     def has_object_permission(self, request, view, obj):
-        if obj.user == request.user:
+        if obj.owner == request.user:
             return True
-        return False
+        else:
+            return False

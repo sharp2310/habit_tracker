@@ -63,8 +63,7 @@ class Migration(migrations.Migration):
                     "is_active",
                     models.BooleanField(
                         default=True,
-                        help_text="Designates whether this user should be treated as active."
-                                  " Unselect this instead of deleting accounts.",
+                        help_text="Designates whether this user should be treated as active. Unselect this instead of deleting accounts.",
                         verbose_name="active",
                     ),
                 ),
@@ -77,27 +76,17 @@ class Migration(migrations.Migration):
                 (
                     "email",
                     models.EmailField(
-                        max_length=254, unique=True, verbose_name="почта"
-                    ),
-                ),
-                (
-                    "avatar",
-                    models.ImageField(
-                        blank=True, null=True, upload_to="user/", verbose_name="фото"
-                    ),
-                ),
-                (
-                    "token",
-                    models.CharField(
-                        blank=True, max_length=100, null=True, verbose_name="token"
+                        help_text="Укажите почту",
+                        max_length=254,
+                        unique=True,
+                        verbose_name="Почта",
                     ),
                 ),
                 (
                     "groups",
                     models.ManyToManyField(
                         blank=True,
-                        help_text="The groups this user belongs to."
-                                  " A user will get all permissions granted to each of their groups.",
+                        help_text="The groups this user belongs to. A user will get all permissions granted to each of their groups.",
                         related_name="user_set",
                         related_query_name="user",
                         to="auth.group",
@@ -117,8 +106,8 @@ class Migration(migrations.Migration):
                 ),
             ],
             options={
-                "verbose_name": "Пользователь",
-                "verbose_name_plural": "Пользователи",
+                "verbose_name": "пользователь",
+                "verbose_name_plural": "пользователи",
             },
             managers=[
                 ("objects", django.contrib.auth.models.UserManager()),

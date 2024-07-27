@@ -4,6 +4,7 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
+
     initial = True
 
     dependencies = [
@@ -11,6 +12,44 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
+        migrations.CreateModel(
+            name="Reward",
+            fields=[
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "title",
+                    models.CharField(
+                        max_length=100, verbose_name="Название вознаграждения"
+                    ),
+                ),
+                (
+                    "description",
+                    models.TextField(
+                        blank=True, null=True, verbose_name="Описание вознаграждения"
+                    ),
+                ),
+                (
+                    "owner",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to=settings.AUTH_USER_MODEL,
+                        verbose_name="Автор",
+                    ),
+                ),
+            ],
+            options={
+                "verbose_name": "Вознаграждение",
+                "verbose_name_plural": "Вознаграждения",
+            },
+        ),
         migrations.CreateModel(
             name="Habit",
             fields=[
@@ -24,27 +63,19 @@ class Migration(migrations.Migration):
                     ),
                 ),
                 (
+                    "activity",
+                    models.CharField(max_length=150, verbose_name="Описание привычки"),
+                ),
+                (
                     "place",
                     models.CharField(
-                        max_length=150,
-                        verbose_name="Место привычки"),
-                ),
-                ("time", models.TimeField(
-                    verbose_name="Время выполнения привычки")
-                 ),
-                (
-                    "action",
-                    models.TextField(
-                        max_length=300,
-                        verbose_name="Действие, которое следует выполнять",
+                        blank=True, max_length=200, null=True, verbose_name="Место"
                     ),
                 ),
                 (
-                    "is_pleasant",
-                    models.BooleanField(
-                        blank=True,
-                        null=True,
-                        verbose_name="Признак приятной привычки"
+                    "time",
+                    models.TimeField(
+                        blank=True, null=True, verbose_name="Время выполнения привычки"
                     ),
                 ),
                 (
@@ -61,15 +92,6 @@ class Migration(migrations.Migration):
                         ],
                         default="Раз в день",
                         verbose_name="Периодичность",
-                    ),
-                ),
-                (
-                    "reward",
-                    models.CharField(
-                        blank=True,
-                        max_length=200,
-                        null=True,
-                        verbose_name="Награда за выполнение",
                     ),
                 ),
                 (
@@ -91,21 +113,37 @@ class Migration(migrations.Migration):
                     ),
                 ),
                 (
-                    "relate_habit",
+                    "is_pleasant",
+                    models.BooleanField(
+                        blank=True, null=True, verbose_name="Признак приятной привычки"
+                    ),
+                ),
+                (
+                    "owner",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to=settings.AUTH_USER_MODEL,
+                        verbose_name="Владелец привычки",
+                    ),
+                ),
+                (
+                    "related_habit",
                     models.ForeignKey(
                         blank=True,
                         null=True,
-                        on_delete=django.db.models.deletion.CASCADE,
+                        on_delete=django.db.models.deletion.SET_NULL,
                         to="habits.habit",
                         verbose_name="Связанная привычка",
                     ),
                 ),
                 (
-                    "user",
+                    "reward",
                     models.ForeignKey(
-                        on_delete=django.db.models.deletion.CASCADE,
-                        to=settings.AUTH_USER_MODEL,
-                        verbose_name="Создатель привычки",
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        to="habits.reward",
+                        verbose_name="Вознаграждение",
                     ),
                 ),
             ],

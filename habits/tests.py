@@ -1,94 +1,235 @@
 from django.urls import reverse
-from rest_framework import status
-from rest_framework.test import APITestCase
 
-from habits.models import Habit
+from rest_framework import status
+
+from rest_framework.test import APITestCase
+from rest_framework.test import APIClient
+
+from habits.models import Habit, Reward
 from users.models import User
 
 
 class HabitTestCase(APITestCase):
-    """Тестирование модели Habit"""
 
     def setUp(self):
-        """Создание тестовой модели Пользователя (с авторизацией) и Привычки"""
-
-        self.user = User.objects.create(email="test@test.com", password="testpassword")
-        self.client.force_authenticate(user=self.user)
-        self.habit = Habit.objects.create(
-            user=self.user,
-            place="GYM",
-            time="18:00:00",
-            action="Go to the GYM",
-            periodicity="Раз в день",
+        self.client = APIClient()
+        self.user = User.objects.create(
+            email="test@email.com", password="123", chat_id="255450278"
         )
+        self.habit = Habit.objects.create(
+            owner=self.user,
+            activity="Test",
+            place="Home",
+            time="10:00:00",
+            duration="120",
+            is_pleasant=False,
+        )
+        self.reward = Reward.objects.create(
+            owner=self.user,
+            title="Test reward",
+            description="Test reward description",
+        )
+        self.client.force_authenticate(user=self.user)
 
-    def test_create_habit(self):
-        """Тестирование создания привычки"""
+    def test_habit_create(self):
+        url = reverse("habits:habit_create")
 
-        url = reverse("habits:habits_create")
         data = {
-            "user": self.user.pk,
-            "place": "GYM",
-            "time": "18:00:00",
-            "action": "Go to the GYM",
-            "periodicity": "Раз в день",
+            "owner": 1,
+            "activity": "Test_2",
+            "place": "Home",
+            "time": "08:00:00",
+            "duration": "120",
+            "is_pleasant": False,
+            "reward": 1,
         }
 
-        response = self.client.post(url, data=data)
-        data = response.json()
-        print(data)
+        data_2 = {
+            "owner": 1,
+            "activity": "Test_2",
+            "place": "Home",
+            "time": "08:00:00",
+            "duration": "-1",
+            "is_pleasant": False,
+            "reward": 1,
+        }
+
+        pleasant_habit_bad = {
+            "owner": 1,
+            "activity": "Test_3",
+            "place": "Home",
+            "time": "08:00:00",
+            "duration": "120",
+            "is_pleasant": True,
+            "reward": 1,
+        }
+        pleasant_habit = {
+            "owner": 1,
+            "activity": "Shower",
+            "place": "Home",
+            "duration": "120",
+            "is_pleasant": True,
+        }
+
+        data_3 = {
+            "owner": 1,
+            "reward": 1,
+            "related_habit": 3,
+            "activity": "Test_3",
+            "place": "Home",
+            "time": "08:00:00",
+            "duration": "120",
+            "is_pleasant": False,
+        }
+
+        response = self.client.post(url, data)
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(data.get("place"), "GYM")
-        self.assertEqual(data.get("time"), "18:00:00")
-        self.assertEqual(data.get("action"), "Go to the GYM")
-        self.assertEqual(data.get("periodicity"), "Раз в день")
+        self.assertEqual(Habit.objects.count(), 2)
+        self.assertEqual(Habit.objects.last().activity, "Test_2")
+        self.assertEqual(Habit.objects.last().owner, self.user)
+        self.assertEqual(Habit.objects.last().reward.title, self.reward.title)
 
-    def test_list_habit(self):
-        """Тестирование вывода всех привычек"""
+        response_2 = self.client.post(url, pleasant_habit)
 
-        response = self.client.get(reverse("habits:habits_list"))
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response_2.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Habit.objects.count(), 3)
+        self.assertEqual(Habit.objects.last().activity, "Shower")
+        self.assertEqual(Habit.objects.last().owner, self.user)
 
-    def test_retrieve_habit(self):
-        """Тестирование просмотра одной привычки"""
+        response_3 = self.client.post(url, data_2)
 
-        url = reverse("habits:habits_retrieve", args=(self.habit.pk,))
-        response = self.client.get(url)
+        self.assertEqual(response_3.status_code, status.HTTP_400_BAD_REQUEST)
+
+        response_3 = self.client.post(url, pleasant_habit_bad)
+
+        self.assertEqual(response_3.status_code, status.HTTP_400_BAD_REQUEST)
+
+        response_3 = self.client.post(url, data_3)
+
+        self.assertEqual(response_3.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_habit_update(self):
+        data = {"activity": "test_2_update"}
+
+        response = self.client.patch(f"/habits/update/{self.habit.pk}/", data)
         data = response.json()
         print(data)
-
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(data.get("place"), self.habit.place)
-        self.assertEqual(data.get("time"), self.habit.time)
-        self.assertEqual(data.get("action"), self.habit.action)
-        self.assertEqual(data.get("periodicity"), self.habit.periodicity)
+        self.assertEqual(data.get("activity"), "test_2_update")
 
-    def test_update_habit(self):
-        """Тестирование изменений привычки"""
-
-        url = reverse("habits:habits_update", args=(self.habit.pk,))
-        data = {
-            "place": "Pool",
-            "time": "19:00:00",
-            "action": "Go to the pool",
-            "periodicity": "Раз в три дня",
-        }
-        response = self.client.patch(url, data)
+    def test_habit_retrieve(self):
+        response = self.client.get(f"/habits/{self.habit.pk}/")
         data = response.json()
-        print(data)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(data.get("place"), "Pool")
-        self.assertEqual(data.get("time"), "19:00:00")
-        self.assertEqual(data.get("action"), "Go to the pool")
-        self.assertEqual(data.get("periodicity"), "Раз в три дня")
+        self.assertEqual(data.get("activity"), self.habit.activity)
 
-    def test_delete_habit(self):
-        """Тестирование удаления привычки"""
+        url_2 = reverse("habits:habit_retrieve", args=(26,))
+        response_2 = self.client.get(url_2)
+        self.assertEqual(response_2.status_code, status.HTTP_404_NOT_FOUND)
 
-        url = reverse("habits:habits_delete", args=(self.habit.pk,))
+    def test_habit_delete(self):
+        url = reverse("habits:habit_delete", args=(self.habit.pk,))
+
         response = self.client.delete(url)
-        print(response)
 
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(Habit.objects.all().count(), 0)
+
+    def test_habit_list(self):
+        url = reverse("habits:habit_delete", args=(5,))
+        self.client.delete(url)
+
+        url = reverse("habits:habit_list")
+        print(url)
+
+        result = {
+            "count": 0,
+            "next": None,
+            "previous": None,
+            "results": [],
+        }
+
+        response = self.client.get(url)
+        data = response.json()
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(data, result)
+
+
+class RewardTestCase(APITestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.user = User.objects.create(
+            email="test@email.com", password="123", chat_id="255450278"
+        )
+        self.reward = Reward.objects.create(
+            owner=self.user,
+            title="Test reward",
+            description="Test reward description",
+        )
+        self.client.force_authenticate(user=self.user)
+
+    def test_reward_retrieve(self):
+        response = self.client.get(f"/habits/rewards/{self.reward.pk}/")
+        data = response.json()
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        self.assertEqual(data.get("title"), self.reward.title)
+
+        response_2 = self.client.get(f"/habits/rewards/65/")
+
+        self.assertEqual(response_2.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_reward_create(self):
+        data = {
+            "owner": self.user.pk,
+            "title": "test_reward_2",
+            "description": "test_reward_description",
+        }
+        response = self.client.post("/habits/rewards/", data, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        self.assertEqual(Reward.objects.all().count(), 2)
+        self.assertEqual(Reward.objects.last().title, "test_reward_2")
+        self.assertEqual(Reward.objects.last().owner, self.user)
+
+    def test_reward_update(self):
+        data = {
+            "title": "test_reward_3",
+        }
+
+        response = self.client.patch(f"/habits/rewards/{self.reward.pk}/", data)
+        data = response.json()
+        print(data)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(data.get("title"), "test_reward_3")
+
+    def test_reward_delete(self):
+        response = self.client.delete(f"/habits/rewards/{self.reward.pk}/")
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(Reward.objects.all().count(), 0)
+
+    def test_reward_list(self):
+        response = self.client.get(f"/habits/rewards/")
+
+        result = [
+            {
+                "id": self.reward.pk,
+                "title": "Test reward",
+                "description": "Test reward description",
+                "owner": self.user.pk,
+            }
+        ]
+
+        data = response.json()
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(Reward.objects.all().count(), 1)
+        self.assertEqual(Reward.objects.last().title, "Test reward")
+        self.assertEqual(Reward.objects.last().owner, self.user)
+        self.assertEqual(data, result)

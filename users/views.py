@@ -2,18 +2,18 @@ from rest_framework import generics
 from rest_framework.permissions import AllowAny
 
 from users.models import User
-from users.paginations import UserPagination
-from users.serializers import UserSerializer
+from users.serializers import UserSerializer, UserProfileSerializer
 
 
 class UserCreateAPIView(generics.CreateAPIView):
-    """Создание нового пользователя"""
+    """
+    Эндпоинт для регистрации пользователя.
+    """
 
     serializer_class = UserSerializer
     queryset = User.objects.all()
-    permission_classes = (
-        AllowAny,
-    )  # Открывает доступ для неавторизованных пользователей
+
+    permission_classes = (AllowAny,)
 
     def perform_create(self, serializer):
         user = serializer.save(is_active=True)
@@ -22,28 +22,47 @@ class UserCreateAPIView(generics.CreateAPIView):
 
 
 class UserListAPIView(generics.ListAPIView):
-    """Получение списка всех пользователей"""
+    """
+    Эндпоинт для получения списка пользователей.
+    """
 
     serializer_class = UserSerializer
     queryset = User.objects.all()
-    pagination_class = UserPagination
+    permission_classes = (AllowAny,)  # для тестов, не забыть удалить
 
 
 class UserRetrieveAPIView(generics.RetrieveAPIView):
-    """Получение информации о конкретном пользователе"""
+    """
+    Эндпоинт для получения информации о пользователе.
+    """
 
     serializer_class = UserSerializer
+
     queryset = User.objects.all()
+
+    def get_serializer_class(self):
+        if self.request.user.pk == self.kwargs["pk"]:
+            return UserSerializer
+        else:
+            return UserProfileSerializer
 
 
 class UserUpdateAPIView(generics.UpdateAPIView):
-    """Изменение информации о пользователе"""
+    """
+    Эндпоинт для обновления информации о пользователе.
+    """
 
     serializer_class = UserSerializer
+
     queryset = User.objects.all()
+
+    def get_object(self):
+        return self.request.user
 
 
 class UserDestroyAPIView(generics.DestroyAPIView):
-    """Удаление пользователя"""
+    """
+    Эндпоинт для удаления пользователя.
+    """
 
     queryset = User.objects.all()
