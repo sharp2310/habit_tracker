@@ -1,68 +1,55 @@
-from rest_framework import generics
-from rest_framework.permissions import AllowAny
+from rest_framework import generics, status
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
 from users.models import User
-from users.serializers import UserSerializer, UserProfileSerializer
+from users.permissions import IsModerator, IsOwner
+from users.serializers import UserCreateSerializer, UserSerializer
 
 
-class UserCreateAPIView(generics.CreateAPIView):
-    """
-    Эндпоинт для регистрации пользователя.
-    """
-
-    serializer_class = UserSerializer
+class UsersCreateView(generics.CreateAPIView):
+    """Контроллер создания пользователя"""
     queryset = User.objects.all()
+    serializer_class = UserCreateSerializer
 
-    permission_classes = (AllowAny,)
-
-    def perform_create(self, serializer):
-        user = serializer.save(is_active=True)
-        user.set_password(user.password)
-        user.save()
-
-
-class UserListAPIView(generics.ListAPIView):
-    """
-    Эндпоинт для получения списка пользователей.
-    """
-
-    serializer_class = UserSerializer
-    queryset = User.objects.all()
-    permission_classes = (AllowAny,)  # для тестов, не забыть удалить
-
-
-class UserRetrieveAPIView(generics.RetrieveAPIView):
-    """
-    Эндпоинт для получения информации о пользователе.
-    """
-
-    serializer_class = UserSerializer
-
-    queryset = User.objects.all()
-
-    def get_serializer_class(self):
-        if self.request.user.pk == self.kwargs["pk"]:
-            return UserSerializer
+    def post(self, request, *args, **kwargs):
+        serializer = UserCreateSerializer(data=request.data)
+        data = {}
+        if serializer.is_valid():
+            serializer.save()
+            data['response'] = True
+            return Response(data, status=status.HTTP_200_OK)
         else:
-            return UserProfileSerializer
+            data = serializer.errors
+            return Response(data)
 
 
-class UserUpdateAPIView(generics.UpdateAPIView):
-    """
-    Эндпоинт для обновления информации о пользователе.
-    """
-
+class UsersListView(generics.ListAPIView):
+    """Котроллер списка пользователей"""
+    queryset = User.objects.all()
     serializer_class = UserSerializer
+    permission_classes = [IsAuthenticated & IsModerator]
 
+
+class UsersDetailView(generics.RetrieveAPIView):
+    """Котроллер описания пользователя"""
     queryset = User.objects.all()
+    serializer_class = UserSerializer
+    permission_classes = [IsAuthenticated & IsOwner]
+    lookup_field = 'username'
 
-    def get_object(self):
-        return self.request.user
 
-
-class UserDestroyAPIView(generics.DestroyAPIView):
-    """
-    Эндпоинт для удаления пользователя.
-    """
-
+class UsersUpdateView(generics.UpdateAPIView):
+    """Контроллер обновления пользователя"""
     queryset = User.objects.all()
+    serializer_class = UserSerializer
+    permission_classes = [IsAuthenticated & IsOwner]
+    lookup_field = 'username'
+
+
+class UsersDeleteView(generics.DestroyAPIView):
+    """Контроллер удаления пользователя"""
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+    permission_classes = [IsAuthenticated & IsOwner]
+    lookup_field = 'username'

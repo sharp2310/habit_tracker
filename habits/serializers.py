@@ -1,37 +1,18 @@
 from rest_framework import serializers
 
-from habits.models import Reward, Habit
-from habits.validators import (
-    HabitOrRewardValidator,
-    ActivityDurationValidator,
-    PleasantRelatedHabitValidator,
-    NiceHabitValidator,
-)
-
-
-class RewardSerializer(serializers.ModelSerializer):
-    """
-    Сериализатор для вознаграждения
-    """
-
-    class Meta:
-        model = Reward
-        fields = "__all__"
+from habits.models import Habit
+from habits.validators import DurationValidator, FrequencyValidator, IsPleasantValidator
 
 
 class HabitSerializer(serializers.ModelSerializer):
-    """
-    Сериализатор для привычки
-    """
+    """Сериализатор дял привычек"""
+    validators = [
+        DurationValidator(field='duration'),
+        FrequencyValidator(field='frequency'),
+        IsPleasantValidator(field1='is_pleasant', field2='link_pleasant', field3='award')
+    ]
 
     class Meta:
         model = Habit
-        fields = "__all__"
-        validators = [
-            HabitOrRewardValidator(field_1="related_habit", field_2="reward"),
-            ActivityDurationValidator(field="duration"),
-            PleasantRelatedHabitValidator(),
-            NiceHabitValidator(
-                field_1="is_pleasant", field_2="related_habit", field_3="reward"
-            ),
-        ]
+        fields = ['pk', 'place', 'time', 'action', 'is_pleasant', 'link_pleasant', 'award', 'frequency', 'duration',
+                  'is_public']

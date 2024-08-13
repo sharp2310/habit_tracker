@@ -1,78 +1,37 @@
 from django.db import models
+from django.utils import timezone
+from django_celery_beat.models import PeriodicTask
 
-from users.models import User
-
-NULLABLE = {"blank": True, "null": True}
-
-
-class Reward(models.Model):
-    owner = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="Автор")
-    title = models.CharField(max_length=100, verbose_name="Название вознаграждения")
-    description = models.TextField(verbose_name="Описание вознаграждения", **NULLABLE)
-
-    def __str__(self):
-        return f"{self.title}"
-
-    class Meta:
-        verbose_name = "Вознаграждение"
-        verbose_name_plural = "Вознаграждения"
+from users.models import NULLABLE, User
 
 
 class Habit(models.Model):
-    #  варианты периодичности привычки
-    DAILY = "Раз в день"
-    EVERY_TWO_DAYS = "Раз в два дня"
-    EVERY_THREE_DAYS = "Раз в три дня"
-    EVERY_FOUR_DAYS = "Раз в четыре дня"
-    EVERY_FIVE_DAYS = "Раз в пять дней"
-    EVERY_SIX_DAYS = "Раз в шесть дней"
-    WEEKLY = "Раз в неделю"
-
-    PERIOD_CHOICES = (
-        (DAILY, "Раз в день"),
-        (EVERY_TWO_DAYS, "Раз в два дня"),
-        (EVERY_THREE_DAYS, "Раз в три дня"),
-        (EVERY_FOUR_DAYS, "Раз в четыре дня"),
-        (EVERY_FIVE_DAYS, "Раз в пять дней"),
-        (EVERY_SIX_DAYS, "Раз в шесть дней"),
-        (WEEKLY, "Раз в неделю"),
-    )
-
-    owner = models.ForeignKey(
-        User, on_delete=models.CASCADE, verbose_name="Владелец привычки"
-    )
-
-    reward = models.ForeignKey(
-        Reward, on_delete=models.SET_NULL, verbose_name="Вознаграждение", **NULLABLE
-    )
-
-    related_habit = models.ForeignKey(
-        "self", on_delete=models.SET_NULL, **NULLABLE, verbose_name="Связанная привычка"
-    )
-
-    activity = models.CharField(max_length=150, verbose_name="Описание привычки")
-    place = models.CharField(max_length=200, verbose_name="Место", **NULLABLE)
-    time = models.TimeField(verbose_name="Время выполнения привычки", **NULLABLE)
-    periodicity = models.CharField(
-        choices=PERIOD_CHOICES, default=DAILY, verbose_name="Периодичность"
-    )
-    duration = models.DurationField(
-        default=None, verbose_name="Продолжительность выполнения (в сек)", **NULLABLE
-    )
-    is_public = models.BooleanField(
-        default=False, verbose_name="Признак публичности", **NULLABLE
-    )
-    is_pleasant = models.BooleanField(
-        verbose_name="Признак приятной привычки", **NULLABLE
-    )
-
-    last_action = models.DateTimeField(
-        auto_now_add=True, verbose_name="последнее сообщение", **NULLABLE
-    )
+    """Модель привычки"""
+    owner = models.ForeignKey(User, on_delete=models.SET_NULL, verbose_name='Владелец привычек', **NULLABLE)
+    place = models.CharField(max_length=150, verbose_name='Место выполнения привычки')
+    time = models.TimeField(default=timezone.now, verbose_name='Время выполнения привычки')
+    action = models.CharField(max_length=150, null=False, blank=False, verbose_name='Действие привычки')
+    is_pleasant = models.BooleanField(default=False, verbose_name='Флаг принятой привычки')
+    link_pleasant = models.ForeignKey("self", on_delete=models.SET_NULL, verbose_name='Связанная привычка', **NULLABLE)
+    award = models.CharField(max_length=150, verbose_name='Вознаграждение за выполнение привычки', **NULLABLE)
+    frequency = models.PositiveIntegerField(default=1, verbose_name='Периодичность привычки в днях')
+    duration = models.PositiveIntegerField(default=120, verbose_name='Время на выполнения привычки')
+    is_public = models.BooleanField(default=False, verbose_name='Флаг публикации')
+    task = models.ForeignKey(PeriodicTask, on_delete=models.SET_NULL, verbose_name='Ссылка на периодическую задачу',
+                             **NULLABLE)
 
     def __str__(self):
-        return f"{self.activity}"
+        loop_self = self
+        message = f"я буду {self.action} в {self.time} в{self.place}\nВремя на выполнение: {self.duration}\n"
+        while True:
+            if loop_self.award:
+                return message + f"Вознаграждение: {loop_self.award}"
+            elif loop_self.link_pleasant is None:
+                return message
+            else:
+                loop_self = loop_self.link_pleasant
+                continue
 
     class Meta:
-        verbose_name = "Привычка"
-        verbose_name_plural = "Привычки"
+        verbose_name = 'Привычка'
+        verbose_name_plural = 'Привычки'

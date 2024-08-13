@@ -1,24 +1,17 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 
-NULLABLE = {"blank": True, "null": True}
+NULLABLE = {'blank': True, 'null': True}
 
 
 class User(AbstractUser):
-    username = None
+    """Модель пользователя"""
+    username = models.CharField(unique=True, max_length=50, verbose_name='Имя пользователя(как в TG)')
+    tg_user_id = models.IntegerField(verbose_name='ID в телеграме', **NULLABLE)
 
-    email = models.EmailField(
-        verbose_name="Почта", unique=True, help_text="Укажите почту"
-    )
-
-    chat_id = models.CharField(max_length=100, **NULLABLE, verbose_name="chat_id")
-
-    USERNAME_FIELD = "email"
+    USERNAME_FIELD = "username"
     REQUIRED_FIELDS = []
 
     class Meta:
-        verbose_name = "пользователь"
-        verbose_name_plural = "пользователи"
-
-    def __str__(self):
-        return self.email
+        verbose_name = 'Пользователь'
+        verbose_name_plural = 'Пользователи'

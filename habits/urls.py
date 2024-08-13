@@ -1,31 +1,16 @@
 from django.urls import path
 
-from rest_framework.routers import DefaultRouter
-
 from habits.apps import HabitsConfig
-from habits.views import (
-    RewardViewSet,
-    HabitCreateAPIView,
-    HabitListAPIView,
-    HabitRetrieveAPIView,
-    HabitUpdateAPIView,
-    HabitDestroyAPIView, HabitIsPublicListAPIView,
-)
+from habits.views import HabitListView, HabitDetailView, HabitCreateView, HabitUpdateView, HabitDeleteView, \
+    PublicHabitListView
 
 app_name = HabitsConfig.name
 
-router = DefaultRouter()
-router.register(r"rewards", RewardViewSet, basename="reward")
-
 urlpatterns = [
-    path("create/", HabitCreateAPIView.as_view(), name="habit_create"),
-    path("", HabitListAPIView.as_view(), name="habit_list"),
-    path("public_list/", HabitIsPublicListAPIView.as_view(), name="habit_is_public"),
-    path(
-        "<int:pk>/",
-        HabitRetrieveAPIView.as_view(),
-        name="habit_retrieve",
-    ),
-    path("update/<int:pk>/", HabitUpdateAPIView.as_view(), name="habit_update"),
-    path("delete/<int:pk>/", HabitDestroyAPIView.as_view(), name="habit_delete"),
-] + router.urls
+    path("create/", HabitCreateView.as_view(), name="habit_create"),
+    path("public/", PublicHabitListView.as_view(), name="habits_public_list"),
+    path("list/", HabitListView.as_view(), name="habits_list"),
+    path("<int:pk>/", HabitDetailView.as_view(), name="habit_detail"),
+    path("<int:pk>/update/", HabitUpdateView.as_view(), name="habit_update"),
+    path("<int:pk>/delete/", HabitDeleteView.as_view(), name="habit_delete"),
+]

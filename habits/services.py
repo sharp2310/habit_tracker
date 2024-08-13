@@ -1,25 +1,20 @@
-import os
-import requests
+import json
+from datetime import datetime, date
 
-from config.settings import TELEGRAM_BOT_TOKEN, TELEGRAM_URL
+from django_celery_beat.models import PeriodicTask, IntervalSchedule
 
 
-def send_tg_message(chat_id, message):
-    """
-    Отправляет сообщение в Телеграм чат с указанным chat_id
-    """
-
-    url = f"{TELEGRAM_URL}{TELEGRAM_BOT_TOKEN}/sendMessage"
-    params = {
-        "chat_id": chat_id,
-        "text": message,
-    }
-
-    # Отправьте запрос и получите ответ
-    response = requests.post(url, params=params)
-
-    # Проверьте статус ответа
-    if response.status_code == 200:
-        print("Сообщение отправлено")
-    else:
-        print(f"Ошибка {response.status_code}")
+def create_periodic_task(frequency, pk, time):
+    """Создание периодической задачи"""
+    schedule, created = IntervalSchedule.objects.get_or_create(
+        every=frequency,
+        period=IntervalSchedule.DAYS,
+    )
+    return PeriodicTask.objects.create(
+        interval=schedule,
+        name=f'{pk}',
+        task='habits.tasks.habits_send_telegram',
+        start_time=datetime.combine(date.today(), time),
+        args=json.dumps({}),
+        kwargs=json.dumps({'pk': pk})
+    )
